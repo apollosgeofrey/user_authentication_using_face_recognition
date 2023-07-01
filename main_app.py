@@ -114,25 +114,23 @@ def authenticate_user():
 
             label, confidence = recognizer.predict(face_roi)
 
-            if confidence < 100:
-                # recognized_person = label  # You can modify this to retrieve the person's name from a mapping dictionary
-                recognized_person = label_name_mapping.get(label, "Unknown")
-                cv2.putText(frame, f"Label: {recognized_person}", (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-                cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
-
-                # Perform action if face is recognized with correct label
-                if recognized_person != "Unknown":
+            if min_num_tries <= max_num_tries:
+                if confidence < 70:
+                    # recognized_person = label  # You can modify this to retrieve the person's name from a mapping dictionary
+                    recognized_person = label_name_mapping.get(label, "Unknown")
+                    cv2.putText(frame, f"Label: {recognized_person}", (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+                    cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
 
                     # Replace this with the action you want to perform
-                    if min_num_tries <= max_num_tries:
-                        min_num_tries += 1
+                    if recognized_person != "Unknown":
                         final_recognized_user.append(recognized_person.upper())
+                    else:
+                        final_recognized_user.append('Unknown')
+
                 else:
-                    # Replace this with the action you want to perform
-                    authentication_text = "\nAccess DENIED! User is not recognized..."
-                    text_label = tk.Label(general_frame, text=authentication_text, font=header_font)
-                    text_label.pack()
-                    window.update()
+                    final_recognized_user.append('Unknown')
+            
+                min_num_tries += 1
 
         cv2.imshow('Face Recognition', frame)
 
@@ -145,9 +143,16 @@ def authenticate_user():
 
         elif min_num_tries > max_num_tries:
             # Replace this with the action you want to perform
-            authentication_text = "\nACCESS GRANTED for "+ statistics.mode(final_recognized_user) +"...\n"
-            authentication_text += "\nLOGIN SUCCESSFUL!\n"
-            text_label = tk.Label(general_frame, text=authentication_text, font=header_font)
+            mode_final_recognized_user = statistics.mode(final_recognized_user)
+            
+            if mode_final_recognized_user=="Unknown":
+                authentication_text = "\nAccess DENIED! User is not recognized!\n"
+                text_label = tk.Label(general_frame, text=authentication_text, font=header_font)
+            else:
+                authentication_text = "\nACCESS GRANTED for "+ statistics.mode(final_recognized_user) +"...\n"
+                authentication_text += "\nLOGIN SUCCESSFUL!\n"
+                text_label = tk.Label(general_frame, text=authentication_text, font=header_font)
+            
             text_label.pack()
             window.update()
             break
@@ -159,6 +164,10 @@ def authenticate_user():
     # Create a frame to hold the buttons
     button_frame = tk.Frame(general_frame)
     button_frame.pack()
+
+    # Create the 'Restart Authentication' button
+    restart_button = tk.Button(button_frame, text="Restart Authentication", command=lambda: confirm_button_to_proceed_authentication("Yes"))
+    restart_button.pack(side="left")
 
     # Create the 'Close' button
     no_button = tk.Button(button_frame, text="Close Application", command=lambda: confirm_button_to_proceed_authentication(no_button.cget("text")))
